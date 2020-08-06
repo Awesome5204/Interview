@@ -17,7 +17,7 @@ struct objc_category {
 
 通过上面我们可以发现，这个结构体主要包含了分类定义的实例方法与类方法，其中instance_methods 列表是 objc_class 中方法列表的一个子集，而class_methods列表是元类方法列表的一个子集。 但这个结构体里面，根本没有属性列表。
 
-分类是用于给原有类添加方法的,因为分类的结构体指针中，没有属性列表，只有方法列表。所以**< 原则上讲它只能添加方法, 不能添加属性(成员变量),实际上可以通过其它方式添加属性>** 
+分类是用于给原有类添加方法的，因为分类的结构体指针中，没有属性列表，只有方法列表。所以**< 原则上讲它只能添加方法， 不能添加属性(成员变量)，实际上可以通过其它方式添加属性>** 
 
 我们知道在一个类中用@property声明属性，编译器会自动帮我们生成成员变量和setter/getter，但分类的指针结构体中，根本没有属性列表。所以在分类中用@property声明属性，既无法生成成员变量也无法生成setter/getter。
 
@@ -59,9 +59,9 @@ struct objc_category {
   static void my_uncaught_exception_handler (NSException *exception) {
       //这里可以取到 NSException 信息
       NSLog(@"***********************************************");
-      NSLog(@"%@",exception);
-      NSLog(@"%@",exception.callStackReturnAddresses);
-      NSLog(@"%@",exception.callStackSymbols);
+      NSLog(@"%@"，exception);
+      NSLog(@"%@"，exception.callStackReturnAddresses);
+      NSLog(@"%@"，exception.callStackSymbols);
       NSLog(@"***********************************************");
   }
   ```
@@ -172,7 +172,7 @@ OC中，一般Block就分为以下3种，`_NSConcreteStackBlock，_NSConcreteMal
 #### 12、block为什么用copy修饰？
 
 - block 是一个对象
-- block使用了外部局部变量,这种情况也正是我们平时所常用的方式。MRC：Block的内存地址显示在栈区，栈区的特点就是创建的对象随时可能被销毁，一旦被销毁后续再次调用空对象就可能会造成程序崩溃，在对block进行copy后，block存放在堆区。所以在使用Block属性时使用copy修饰，但是ARC中的Block都会在堆上的，系统会默认对Block进行copy操作
+- block使用了外部局部变量，这种情况也正是我们平时所常用的方式。MRC：Block的内存地址显示在栈区，栈区的特点就是创建的对象随时可能被销毁，一旦被销毁后续再次调用空对象就可能会造成程序崩溃，在对block进行copy后，block存放在堆区。所以在使用Block属性时使用copy修饰，但是ARC中的Block都会在堆上的，系统会默认对Block进行copy操作
 - 使用strong也可以，但是block的strong行为默认是用copy的行为实现的，因为block变量默认是声明为栈变量的，为了能够在block的声明域外使用，所以要把block拷贝（copy）到堆，所以说为了block属性声明和实际的操作一致，最好声明为copy。
 
 
@@ -197,7 +197,7 @@ OC中，一般Block就分为以下3种，`_NSConcreteStackBlock，_NSConcreteMal
 
 #### 14、RunLoop是什么？
 
-- RunLoop 就是一个事件处理的循环，用来不停的调度工作以及处理输入事件。使用 RunLoop 的目的是让你的线程在有工作的时候忙于工作,而没工作的时候处于休眠状态。 runloop 的设计是为了减少 cpu 无谓的空转。
+- RunLoop 就是一个事件处理的循环，用来不停的调度工作以及处理输入事件。使用 RunLoop 的目的是让你的线程在有工作的时候忙于工作，而没工作的时候处于休眠状态。 runloop 的设计是为了减少 cpu 无谓的空转。
 
 - RunLoop的作用就是用来管理线程的， 当线程的RunLoop开启之后，线程就会在执行完成任务后，进入休眠状态，随时等待接收新的任务，而不是退出。
 
@@ -210,4 +210,109 @@ OC中，一般Block就分为以下3种，`_NSConcreteStackBlock，_NSConcreteMal
 3. **UIInitializationRunLoopMode**: 在刚启动 App 时第进入的第一个 Mode，启动完成后就不再使用，会切换到kCFRunLoopDefaultMode
 4. **GSEventReceiveRunLoopMode**: 接受系统事件的内部 Mode，通常用不到
 5. **kCFRunLoopCommonModes**: 这是一个占位用的Mode，作为标记kCFRunLoopDefaultMode和UITrackingRunLoopMode用，并不是一种真正的Mode
+
+
+
+#### 16、用weak修饰的对象释放后为什么会自动为nil？
+
+runtime会把weak对象放入一个hash表中，Key是weak所指对象的地址，Value是weak指针的地址（这个地址的值是所指对象指针的地址）数组。
+
+释放时，调用clearDeallocating函数。clearDeallocating函数首先根据对象地址获取所有weak指针地址的数组，然后遍历这个数组把其中的数据设为nil，最后把这个entry从weak表中删除，最后清理对象的记录。
+
+
+
+#### 17、@synthesize 和 @dynamic 分别有什么作用
+
+@property有两个对应的词，一个是 @synthesize，一个是 @dynamic。如果 @synthesize和 @dynamic都没写，那么默认的就是@syntheszie var = _var;
+
+- `@synthesize` 的语义是如果你没有手动实现 setter 方法和 getter 方法，那么编译器会自动为你加上这两个方法
+- `@dynamic` 告诉编译器：属性的 setter 与 getter 方法由用户自己实现，不自动生成。
+
+
+
+#### 18、UIView和CALayer的区别和联系
+
+- 两者最明显的区别是 View可以接受并处理事件，而 Layer 不可以
+
+- 每个 UIView 内部都有一个 CALayer 在背后提供内容的绘制和显示，并且 UIView 的尺寸样式都由内部的 Layer 所提供。两者都有树状层级结构，layer 内部有 SubLayers，View 内部有 SubViews.但是 Layer 比 View 多了个AnchorPoint 
+- 在 View显示的时候，UIView 做为 Layer 的 CALayerDelegate，View 的显示内容由内部的 CALayer 的 display 
+- CALayer 是默认修改属性支持隐式动画的，在给 UIView 的 Layer 做动画的时候，View 作为 Layer 的代理，Layer 通过 actionForLayer:forKey:向 View请求相应的 action(动画行为) 
+- layer 内部维护着三分 layer tree，分别是 presentLayer Tree(动画树)，modeLayer Tree(模型树)， Render Tree (渲染树)，在做 iOS动画的时候，我们修改动画的属性，在动画的其实是 Layer 的 presentLayer的属性值，而最终展示在界面上的其实是提供 View的modelLayer
+
+
+
+#### 19、 static有什么作用?
+
+static关键字可以修饰函数和变量，作用如下：
+
+-  **隐藏** 通过static修饰的函数或者变量，其他文件中的方法和函数无法访问
+- **静态变量** 类方法不可以访问实例变量（函数），通过static修饰的实例变量（函数），可以被类 方法访问； 
+- **持久** static修饰的变量，能且只能被初始化一次； 
+- **默认初始化** static修饰的变量，默认初始化为0；
+
+
+
+#### 20、KVO底层实现原理
+
+当对象某个属性添加了KVO属性观察：
+
+```objective-c
+Person *p1 = [[Person alloc] init];
+NSLog(@"KVO 之前：%@", object_getClass(p1)); //KVO 之前：Person
+[p1 addObserver:self forKeyPath:@"name" options:NSKeyValueObservingOptionNew context:nil];
+NSLog(@"KVO 之后：%@", object_getClass(p1)); //KVO 之后：NSKVONotifying_Person
+```
+
+此时系统会动态生成一个类名为NSKVONotifying_Person的Person 的子类，然后把Person类的isa指针指向NSKVONotifying_Person子类，并且系统修改了默认方法实现，把set方法(setName:)的IMP指针指向了 Foundation 框架里的` _NSSetObjectValueAndNotify` 函数。
+
+Person内部只有setName: 方法。
+
+而NSKVONotifying_Person内部有：1、setName: 方法；2、还重写了class和dealloc方法；3、`_isKVOA`方法
+
+大致的得出， p1添加 KVO 后 runtime 动态的生成了一个 NSKVONotifying_Person子类 并重写了 setName 方法
+
+setName 方法内部调用了 Foundation 的` _NSSetObjectValueAndNotify` 函数 ,在函数 
+
+`_NSSetObjectValueAndNotify` 内部
+
+1、首先会调用 willChangeValueForKey
+2、然后给 name 属性赋值
+3、最后调用 didChangeValueForKey
+4、最后调用 observer 的 observeValueForKeyPath 去告诉监听器属性值发生了改变 
+
+
+
+大致实现如下：
+
+```objective-c
+@implementation NSKVONotifying_Person
+
+- (void)setName:(NSString *)name {
+    _NSSetObjectValueAndNotify();
+}
+
+- (void)willChangeValueForKey:(NSString *)key {
+    NSLog(@"willChangeValueForKey");
+    [super willChangeValueForKey:key];
+}
+
+- (void)didChangeValueForKey:(NSString *)key {
+    NSLog(@"didChangeValueForKey");
+    [super didChangeValueForKey:key];
+}
+
+void _NSSetObjectValueAndNotify() {
+    
+    [self willChangeValueForKey: @"name"];
+    [super setName: name];
+    [self didChangeValueForKey: @"name"];
+}
+
+- (Class)class {
+    return class_getSuperclass(object_getClass(self));
+}
+@end
+```
+
+至于重写了 dealloc 和 class 方法 是为了做一些 KVO 释放内存 和 隐藏外界对于 NSKVONotifying_Person 子类的存在。
 
