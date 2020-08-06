@@ -174,3 +174,40 @@ OC中，一般Block就分为以下3种，`_NSConcreteStackBlock，_NSConcreteMal
 - block 是一个对象
 - block使用了外部局部变量,这种情况也正是我们平时所常用的方式。MRC：Block的内存地址显示在栈区，栈区的特点就是创建的对象随时可能被销毁，一旦被销毁后续再次调用空对象就可能会造成程序崩溃，在对block进行copy后，block存放在堆区。所以在使用Block属性时使用copy修饰，但是ARC中的Block都会在堆上的，系统会默认对Block进行copy操作
 - 使用strong也可以，但是block的strong行为默认是用copy的行为实现的，因为block变量默认是声明为栈变量的，为了能够在block的声明域外使用，所以要把block拷贝（copy）到堆，所以说为了block属性声明和实际的操作一致，最好声明为copy。
+
+
+
+#### 13、load 和 initilze 的调用情况，以及子类的调用顺序问题？
+
+- initialize 方法是这个类第一次调用（比如init）时会调用此方法，并且只会调用一次。 如果某一个类一直没有被用到，此方法也不会执行。
+
+- initialize先初始化父类， 在初始化子类，子类的initialize 会覆盖父类的方法。
+
+- 分类中实现了initialize会覆盖本来的initialize方法，如果多个分类都执行了initialize ，那么只是执行最后编译的那个。
+
+  
+
+- load当程序被加载的时候就会调用， 其加载顺序为， 如果子类实现类load 先执行父类 -> 在执行子类，而分类的在最后执行。
+- 如果子类不实现load，父类的load就不会被执行。
+- load是线程安全的，其内部使用了锁，所以我们应该避免在load方法中线程阻塞。
+- load在分类中，重写了load方法， 不会影响其主类的方法。即不会覆盖本类的load方法
+- 当有多个类的时候，每个类的load的执行顺序和编译顺序一致。
+
+
+
+#### 14、RunLoop是什么？
+
+- RunLoop 就是一个事件处理的循环，用来不停的调度工作以及处理输入事件。使用 RunLoop 的目的是让你的线程在有工作的时候忙于工作,而没工作的时候处于休眠状态。 runloop 的设计是为了减少 cpu 无谓的空转。
+
+- RunLoop的作用就是用来管理线程的， 当线程的RunLoop开启之后，线程就会在执行完成任务后，进入休眠状态，随时等待接收新的任务，而不是退出。
+
+  
+
+#### 15、Runloop模式有哪些？
+
+1. **kCFRunLoopDefaultMode**：App的默认Mode，通常主线程是在这个Mode下运行
+2. **UITrackingRunLoopMode**：界面跟踪 Mode，用于 ScrollView 追踪触摸滑动，保证界面滑动时不受其他 Mode 影响
+3. **UIInitializationRunLoopMode**: 在刚启动 App 时第进入的第一个 Mode，启动完成后就不再使用，会切换到kCFRunLoopDefaultMode
+4. **GSEventReceiveRunLoopMode**: 接受系统事件的内部 Mode，通常用不到
+5. **kCFRunLoopCommonModes**: 这是一个占位用的Mode，作为标记kCFRunLoopDefaultMode和UITrackingRunLoopMode用，并不是一种真正的Mode
+
