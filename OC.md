@@ -23,6 +23,25 @@ struct objc_category {
 
 我们可以通过runtime的`objc_setAssociatedObject` 和 `objc_getAssociatedObject` 实现setter和getter方法，给分类添加属性，但调用成员变量依然报错。
 
+Extension是Category的一个特例。类扩展与分类相比只少了分类的名称，所以称之为“匿名分类”。
+
+```objectivec
+@interface XXX ()
+//私有属性
+//私有方法（如果不实现，编译时会报警,Method definition for 'XXX' not found）
+@end
+```
+
+### 分类与类扩展的区别：
+
+①类别中原则上只能增加方法（能添加属性的的原因只是通过`runtime`解决无`setter/getter`的问题而已）；
+②类扩展不仅可以增加方法，还可以增加实例变量（或者属性），只是该实例变量默认是@private类型的（使用范围只能在自身类，而不是子类或其他地方）；
+③类扩展中声明的方法没被实现，编译器会报警，但是类别中的方法没被实现编译器是不会有任何警告的。这是因为**类扩展是在编译阶段被添加到类中，而类别是在运行时添加到类中**。
+④类扩展不能像类别那样拥有独立的实现部分（@implementation部分），也就是说，类扩展所声明的方法必须依托对应类的实现部分来实现。
+⑤定义在 .m 文件中的类扩展方法为私有的，定义在 .h 文件（头文件）中的类扩展方法为公有的。类扩展是在 .m 文件中声明私有方法的非常好的方式。
+
+
+
 参考链接：https://www.jianshu.com/p/9e827a1708c6
 
 
@@ -66,6 +85,8 @@ struct objc_category {
   }
   ```
 
+- 可以通过runtime的置换方法，把数组越界，dictionary添加nil对象等问题方法置换，手动抛出Exception，然后上报服务器，也避免了程序崩溃。
+
 
 
 #### 5、==、 isEqualToString、isEqual区别？
@@ -86,7 +107,7 @@ struct objc_category {
 
 #### 7、NSString类型为什么要用copy修饰 ？
 
-主要是防止NSString被修改，如果没有修改的说法用Strong也行。当String对象MyStr使用Strong修饰时，如果此时赋值给一个NSMutableString对象StrM，当StrM发生修改时，MyStr也会跟着修改，容易引出bug。
+主要是防止NSString被修改，如果没有修改的时候用Strong也行。当String对象MyStr使用Strong修饰时，如果此时赋值给一个NSMutableString对象StrM，当StrM发生修改时，MyStr也会跟着修改，容易引出bug。
 
 
 
@@ -217,7 +238,13 @@ OC中，一般Block就分为以下3种，`_NSConcreteStackBlock，_NSConcreteMal
 
 runtime会把weak对象放入一个hash表中，Key是weak所指对象的地址，Value是weak指针的地址（这个地址的值是所指对象指针的地址）数组。
 
-释放时，调用clearDeallocating函数。clearDeallocating函数首先根据对象地址获取所有weak指针地址的数组，然后遍历这个数组把其中的数据设为nil，最后把这个entry从weak表中删除，最后清理对象的记录。
+weak 的实现原理可以概括以下三步：
+
+1、初始化时：runtime会调用objc_initWeak函数，初始化一个新的weak指针指向对象的地址。
+
+2、添加引用时：objc_initWeak函数会调用 objc_storeWeak() 函数， objc_storeWeak() 的作用是更新指针指向，创建对应的弱引用表。
+
+3、释放时，调用clearDeallocating函数。clearDeallocating函数首先根据对象地址获取所有weak指针地址的数组，然后遍历这个数组把其中的数据设为nil，最后把这个entry从weak表中删除，最后清理对象的记录。
 
 
 
