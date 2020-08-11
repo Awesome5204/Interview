@@ -387,25 +387,96 @@ void _NSSetObjectValueAndNotify() {
 
 
 
+#### 22、iOS组件化方案的三种实现
+
+组件化的三种方案：`url-block`、`protocol-class`、`target-action`
+
+- **url-block**：这是蘑菇街中应用的一种页面间调用的方式，通过在启动时注册组件提供的服务，把调用组件使用的`url`和组件提供的服务`block`对应起来，保存到内存中。在使用组件的服务时，通过`url`找到对应的`block`，然后获取服务。
+
+  - **注册：**
+
+    ```objective-c
+    [MGJRouter registerURLPattern:@"mgj://detail?id=:id" toHandler:^(NSDictionary *routerParameters) {
+        NSNumber *id = routerParameters[@"id"];
+        // create view controller with id
+        // push view controller
+    }];
+    ```
+
+  - **调用：**
+
+    ```objective-c
+    [MGJRouter openURL:@"mgj://detail?id=404"]
+    ```
+
+  - **存在问题：**
+
+    - 需要在内存中维护`url-block`的表，组件多了可能会有内存问题
+
+    - `url`的参数传递受到限制，只能传递常规的字符串参数，无法传递非常规参数，如`UIImage`、`NSData`等类型
+
+    - 没有区分本地调用和远程调用的情况，尤其是远程调用，会因为`url`参数受限，导致一些功能受限
+
+    - 组件本身依赖了中间件，且分散注册使的耦合较多
+
+    
+
+- **protocol-class：**通过`protocol`定义服务接口，组件通过实现该接口来提供接口定义的服务，具体实现就是把`protocol`和`class`做一个映射，同时在内存中保存一张映射表，使用的时候，就通过`protocol`找到对应的`class`来获取需要的服务。
+
+  - **注册：**
+
+    ```objective-c
+    [ModuleManager registerClass:ClassA forProtocol:ProtocolA]
+    ```
+
+  - **调用：**
+
+    ```objective-c
+    [ModuleManager classForProtocol:ProtocolA]
+    ```
+
+  - **存在问题：**
+
+    解决了`url-block`中无法传递非常规参数的问题，使得组件间的调用更为方便，但是它依然没有解决组件依赖中间件的问题、内存中维护映射表的问题、组件的分散调用的问题。设计思想和方案一类似，都是通过给组件加了一层`wrapper`，然后给使用者调用。
 
 
 
+- **target-action：**通过给组件包装一层`wrapper`来给外界提供服务，然后调用者通过依赖中间件来使用服务；其中，中间件是通过`runtime`来调用组件的服务，是真正意义上的解耦，也是该方案最核心的地方。具体实施过程是给组件封装一层`target`对象来对外提供服务，不会对原来组件造成入侵；然后，通过实现中间件的`category`来提供服务给调用者，这样使用者只需要依赖中间件，而组件则不需要依赖中间件。
 
+  - **target:**
 
+    ```objective-c
+    @interface Target_ModulAViewController : UIViewController
+    - (UIViewController *)Action_ModulAViewController:(NSDictionary *)param;
+    @end
+    ```
 
+  - **CTMediator分类：**
 
+    ```objective-c
+    //CTMediator+ModulA.m
+    @implementation CTMediator (ModulA)
+    // 公开此方法
+    - (UIViewController *)modulAWithShowPicture:(BOOL)showPicture
+    {
+        NSDictionary *dic = @{@"showPicture":@(showPicture)};
+        return [self performTarget:@"ModulAViewController" action:@"ModulAViewController" params:dic shouldCacheTarget:NO];
+    }
+    @end
+    ```
 
+  - **调用：**
 
+    ```objective-c
+    //ViewController.m
+    #import <ModulCategotyA/CTMediator+ModulA.h>
+    - (void)doneAction {
+        UIViewController *vc = [[CTMediator sharedInstance] modulAWithShowPicture:YES];
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+    ```
 
-
-
-
-
-
-
-
-
-
+    
 
 
 
