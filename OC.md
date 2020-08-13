@@ -478,9 +478,62 @@ void _NSSetObjectValueAndNotify() {
 
     
 
+#### 22、iOS自动释放池
 
+自动释放池是oc提供的一种自动回收的机制，具有延迟释放的特性，即当我们创建了一个对象，并把他加入到了自动释放池中时，他不会立即被释放，会等到一次runloop结束或者作用域超出{}或者超出[pool release]之后再被释放。
 
+系统通过一个栈来管理所有的自动释放池，每当创建了一个新的自动释放池，系统就会把它压入栈顶，每当有一个自动释放池要被释放的时候，就会从栈顶弹出一个自动释放池，该自动释放池会对加入他中的对象做一次release，然后销毁，栈顶下移，每当有一个新对象被创建，他会被加入到离他最近的自动释放池，也就是位于当前栈顶的自动释放池。
 
+**MRC：**
+
+- 通过手动创建的方式来创建自动释放池
+
+  ```objective-c
+  NSAutoreleasePool *pool = [[ NSAutoreleasePool alloc]init ];//创建一个自动释放池
+  Person *person = [[Person alloc]init];
+  //调autorelease方法将对象加入到自动释放池
+  //注意使用该方法，对象不会自己加入到自动释放池，需要人为调用autorelease方法加入
+  [person autorelease];
+  //,手动释放自动释放池执行完这行代码是，自动释放池会对加入他中的对象做一次release操作
+  [pool release];
+  ```
+
+  自动释放池销毁时机：[pool release]代码执行完后
+
+- 通过@autoreleasepool来创建
+
+  ```objective-c
+  @autoreleasepool {
+          //在这个{}之内的变量默认被添加到自动释放池
+           Person *p = [[Person alloc] init];
+        }//出了这个括号，p被释放
+  ```
+
+  系统就是通过@autoreleasepool {}这种方式来为我们创建自动释放池的，一个线程对应一个runloop，系统会为每一个runloop隐式的创建一个自动释放池，所有的autoreleasePool构成一个栈式结构，在每个runloop结束时，当前栈顶的autoreleasePool会被销毁，而且会对其中的每一个对象做一次release（严格来说，是你对这个对象做了几次autorelease就会做几次release，不一定是一次)
+
+**ARC：**
+
+- ARC下除了NSAutoreleasePool不可用以外，其他的同MRC
+
+**自动释放池的原理：**每一个自动释放池没有单独的结构，每一个autorealeasePool对象都是由若干个个autoreleasePoolPage通过双向链表连接而成，当一个对象调用了autorelease方法，这个对象就会被加入到当前自动释放池的最新的autoreleasePoolPage中。
+
+```objective-c
+class AutoreleasePoolPage {
+    magic_t const magic;
+    id *next;//指向栈顶最新被添加进来的autorelease对象的下一个位置
+    pthread_t const thread;//指向当前线程的
+    AutoreleasePoolPage * const parent;
+    AutoreleasePoolPage *child;
+    uint32_t const depth;
+    uint32_t 
+  }
+```
+
+- autoreleasePoolPage是按照线程一一对应的，
+- autoreleasePoolPage会开辟4096字节空间，除了上面的实例变量所占的空间，剩余的空间全部用来存储autorelease对象的地址
+- id *next:指向栈顶最新被添加进来的autorelease对象的下一个位置
+- 一个autoreleasePoolPage空间被占满时，会创建一个新的autoreleasePoolPage对象，后来的对象添加在在新的autoreleasePoolPage中
+- 每当进行一objc_autoreleasePoolPush（）次入栈调用时，runtime会像当前的autoreleasePoolPage中添加一个哨兵对象，值为0，objc_autoreleasePoolPush（）会返回这个哨兵对象的地址，然后将该参数作为objc_autoreleasePoolPop（）的参数，根据哨兵对象的地址找到他所在的page，哨兵对象可以跨越到不通的page，直到找到他所在的page，在当前page中将所有晚于哨兵对象的autorelease对象都做一次release，并移动next指针到正确位置。
 
 
 
