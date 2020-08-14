@@ -537,5 +537,44 @@ class AutoreleasePoolPage {
 
 
 
+#### 23、iOS中的锁
+
+- 自旋锁（`OSSPinLock`、`os_unfair_lock`）
+- 互斥锁（`pthread_mutex_t`、`NSLock`、`@synthronized`）
+- 递归锁（`pthread_mutex_t`、`NSRecursiveLock`）
+- 条件锁（`pthread_cond_t`、`NSCondition`、`NSConditionLock`）
+- 信号量（`dispatch_semaphore_t`、`pthread_mutex_t`等）
+- 读写锁（`pthread_rwlock_t`）
+- 栅栏（`dispatch_barrier_sync`、`dispatch_barrier_async`）
+- atomic
+
+**自旋锁和互斥锁有什么区别？**
+
+**自旋锁：**就是当资源被占用时，其他线程访问时会使其不停地循环访问，导致新访问者一直处于忙碌状态，直到资源持有者释放锁。也正是因为其他调用者会保持自旋状态，使得在锁的保持者释放锁时能够即刻获得锁，效率非常高。同时相对而言也会比较消耗CPU资源。
+
+**互斥锁：**互斥锁和自旋锁类似，当资源被访问时，其他线程是无法同时访问的。不同的是互斥锁在被占用的情况下，只能进入休眠状态，等锁被释放后，CPU会唤醒资源调用者。
+
+
+
+
+
+腾讯面试：什么是链表？ 链表和数组的区别？什么是runloop？怎么保证线程安全？手写合并两个升序链表？对1w首歌曲进行排序？MVVM的viewmodel做了什么？Rxswift的弊端（真不知道）？
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
