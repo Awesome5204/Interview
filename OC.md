@@ -226,6 +226,27 @@ OC中，一般Block就分为以下3种，`_NSConcreteStackBlock，_NSConcreteMal
 
 - RunLoop的作用就是用来管理线程的， 当线程的RunLoop开启之后，线程就会在执行完成任务后，进入休眠状态，随时等待接收新的任务，而不是退出。
 
+- 内部其实就是一个do-while循环，在这个循环内部不断的处理各种任务（比如Source、timer、Observer）。
+
+- 一个线程对应一个runloop，主线程的runloop默认开启，子线程的runloop需要手动调用run()方法。
+
+- runloop只能选择一个mode，如果当前mode没有任何事件（source0、source1、timer）则直接退出runloop。
+
+  ```objective-c
+  //1.获得子线程对应的runloop
+      NSRunLoop *runloop = [NSRunLoop currentRunLoop];
+      
+      //保证runloop不退出
+      //NSTimer *timer = [NSTimer timerWithTimeInterval:2.0 target:self selector:@selector(run) userInfo:nil repeats:YES];
+      //[runloop addTimer:timer forMode:NSDefaultRunLoopMode];
+      [runloop addPort:[NSPort port] forMode:NSDefaultRunLoopMode];
+      
+      //2.默认是没有开启
+      [runloop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:10]];
+  ```
+  
+  
+  
   
 
 #### 15、Runloop模式有哪些？
@@ -553,6 +574,33 @@ class AutoreleasePoolPage {
 **自旋锁：**就是当资源被占用时，其他线程访问时会使其不停地循环访问，导致新访问者一直处于忙碌状态，直到资源持有者释放锁。也正是因为其他调用者会保持自旋状态，使得在锁的保持者释放锁时能够即刻获得锁，效率非常高。同时相对而言也会比较消耗CPU资源。
 
 **互斥锁：**互斥锁和自旋锁类似，当资源被访问时，其他线程是无法同时访问的。不同的是互斥锁在被占用的情况下，只能进入休眠状态，等锁被释放后，CPU会唤醒资源调用者。
+
+
+
+#### 24、iOS中显式和隐式动画的区别
+
+- 隐式动画一直存在，是由Core Animation自动完成的，ore Animation在每个runloop周期中自动开始一次新的事务，即使你不显式的用[CATransaction begin]开始一次事务，任何在一次runloop循环中属性的改变都会被集中起来，然后做一次0.25秒的动画。
+- 显式动画，Core Animation提供的显式动画类型，既可以直接对图层属性做动画，也可以覆盖默认的图层行为。我们经常使用的CABasicAnimation，CAKeyframeAnimation，CATransitionAnimation，CAAnimationGroup等都是显式动画类型，这些CAAnimation类型可以直接提交到CALayer上。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
